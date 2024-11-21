@@ -1,5 +1,5 @@
 from func import *
-occurences("res/test1.txt")
+occurences("../AP/AP891217")
 fich=open("res/res.txt","r")
 liste = json.load(fich)
 listeTerme=[]

@@ -1,0 +1,5 @@
+stop=open("../stopwords.txt")
+str=stop.read()
+stopList=str.splitlines()
+stop.close()
+print(stopList.__contains__("can"))
