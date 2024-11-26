@@ -46,12 +46,13 @@ class Occurences:
 
 def occurences(nomFichier:str,texte:str,dictionnaire:dict,stopList:list)->dict:
     
-    sno = nltk.stem.SnowballStemmer('french')
+    sno = nltk.stem.SnowballStemmer('english')
     for ligne in texte.splitlines():
         for mot in ligne.split(" "):
+            mot=sno.stem(mot)
             if mot.isalnum() and not stopList.__contains__(mot):
                 #mot=mot.replace(".","")
-                mot=sno.stem(mot)
+                
                 terme=dictionnaire.get(mot)
                 if terme==None:
                     terme=dict()
@@ -89,9 +90,9 @@ def parseAll():
     dest.truncate(0)
     json.dump(dictionnaire,dest,default=vars)
 
-def loadDict():
+def loadDict()->dict:
     dest=open("res/res.txt","r")
     dictionnaire=json.load(dest)
-    liste=list(dictionnaire.get("two").items())
-    liste.sort(key=lambda tuple:tuple[1],reverse=True)
-    print(liste)
+    dest.close()
+    return dictionnaire
+    
