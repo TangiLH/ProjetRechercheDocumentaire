@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import nltk
 import os, glob
-from bs4 import BeautifulSoup #parser SGML https://stackoverflow.com/questions/4633162/sgml-parser-in-python
+import re #https://stackoverflow.com/questions/919056/case-insensitive-replace
+from bs4 import BeautifulSoup, ResultSet #parser SGML https://stackoverflow.com/questions/4633162/sgml-parser-in-python
 
+PATH="../AP/"
 
 class Terme:
     """DEPRECIE
@@ -120,7 +122,7 @@ def parseAll():
     stopList=str.splitlines()
     stop.close()
     dictionnaire=dict()
-    for filename in glob.glob('../AP/AP*'):
+    for filename in glob.glob(PATH+'AP*'):
         with open(os.path.join(os.getcwd(), filename), 'r') as f: # open in readonly mode
             parseFile(filename,stopList,dictionnaire)
 
@@ -153,7 +155,20 @@ def findword(word:str):
         print("mot "+word+" non trouvé")
         return
     else:
-        print(occurences)
+        liste=list(occurences.items())
+        liste.sort()
+        for document,cle in liste:
+            split=document.split("-")
+            fichier=split[0]
+            lecteur=open(PATH+fichier)
+            soupSet=BeautifulSoup(lecteur.read(),'html.parser').find_all("doc")
+            highlightInFile(word,soupSet,document,split[1],cle[1])
+            """
+            print("fichier "+str(fichier)+" document "+str(document)+" nombre d'occurences "+str(cle[0]))
+            print("lignes :")
+            for ligne in cle[1]:
+                print(ligne)
+                """
 
 def highlightInText(word:str,textName:str,text:str):
     """affiche dans la console les lignes ou le terme apparaît dans le texte, avec le terme surligné
@@ -172,7 +187,7 @@ def highlightInText(word:str,textName:str,text:str):
 
         i+=1
 
-def highlightInFile(word:str,fileName:str,textList:list):
+def highlightInFile(word:str,soupSet:ResultSet,textName:str,textNumber:str,lineNumbers:list):
     """affiche dans la console les lignes ou le terme apparaît dans le fichier, avec le terme surligné
 
     Args:
@@ -180,16 +195,31 @@ def highlightInFile(word:str,fileName:str,textList:list):
         fileName (str): le nom du Fichier
         textList (list) : la liste des noms de textes contenant le mot
     """
-    fichier=open(fileName)
-    str=fichier.read()
-    fichier.close
-    soup=BeautifulSoup(str,'html.parser')
-    set=soup.find_all('doc')
+    
     i=0
-    for doc in set:
-        docno=doc.find('docno').text
-        if(textList.__contains__(docno)):
-            print(docno)
-            i+=1
-            if(doc.find('text'))!=None: 
-                highlightInText(word,docno,doc.find('text').text)
+    doc=(soupSet[int(textNumber)-1])
+    text=(doc.find('text').text)
+    split=text.splitlines()
+    reg=regex(word)
+    for lineNumber in lineNumbers:
+        line=split[lineNumber-1]
+        insensitive = re.compile(reg)
+        test=insensitive.findall(line)
+        for match in test:
+            line=line.replace(match,"\033[32m"+match+"\033[0m")
+        print(line)
+
+def regex(word:str)->str:
+    """genere une regex à partir du mot. la regex contient le mot en minisuscule, en majuscule, et avec la premiere lettre en majuscule
+
+    Args:
+        word (str): le mot
+
+    Returns:
+        str: la regex retournée
+    """
+    res=""
+    res+=str.lower(word)
+    res+="|"+str.upper(word)
+    res+="|"+str.capitalize(word)
+    return res
