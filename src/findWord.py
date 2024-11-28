@@ -1,6 +1,6 @@
-from func import findword
+from func import findWord
 import sys
 if(len(sys.argv)==1):
     print("donner un mot")
     exit(0)
-findword(sys.argv[1])
+findWord(sys.argv[1])

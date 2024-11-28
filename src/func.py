@@ -1,6 +1,7 @@
 ###Tangi LE HENAFF
 from __future__ import annotations
 import json
+import string
 import nltk
 import os, glob
 import re #https://stackoverflow.com/questions/919056/case-insensitive-replace
@@ -71,7 +72,7 @@ def occurences(nomTexte:str,texte:str,dictionnaire:dict,stopList:list)->dict:
         for mot in ligne.split(" "):
             stem=sno.stem(mot)
             if mot.isalnum() and not stopList.__contains__(mot) and not stopList.__contains__(stem):
-                #mot=mot.replace(".","")
+                mot=mot.translate(str.maketrans('', '', string.punctuation))
                 
                 terme=dictionnaire.get(stem)
                 if terme==None:
@@ -141,7 +142,7 @@ def loadDict()->dict:
     dest.close()
     return dictionnaire
 
-def findword(word:str):
+def findWord(word:str):
     """trouve un mot dans le corpus
 
     Args:
@@ -157,12 +158,16 @@ def findword(word:str):
     else:
         liste=list(occurences.items())
         liste.sort()
+        memFichier=""
+        soupSet=None
         for document,cle in liste:
             split=document.split("-")
             fichier=split[0]
-            lecteur=open(PATH+fichier)
-            soupSet=BeautifulSoup(lecteur.read(),'html.parser').find_all("doc")
-            highlightInFile(word,soupSet,document,split[1],cle[1])
+            if(fichier!=memFichier or soupSet==None):
+                lecteur=open(PATH+fichier)
+                soupSet=BeautifulSoup(lecteur.read(),'html.parser').find_all("doc")
+                lecteur.close()
+            highlightInFile([word],soupSet,document,split[1],cle[1])
             """
             print("fichier "+str(fichier)+" document "+str(document)+" nombre d'occurences "+str(cle[0]))
             print("lignes :")
@@ -187,27 +192,30 @@ def highlightInText(word:str,textName:str,text:str):
 
         i+=1
 
-def highlightInFile(word:str,soupSet:ResultSet,textName:str,textNumber:str,lineNumbers:list):
-    """affiche dans la console les lignes ou le terme apparaît dans le fichier, avec le terme surligné
+def highlightInFile(words:list, soupSet:ResultSet,textName:str,textNumber:str,lineNumbers:list):
+    """affiche dans la console les lignes ou les termes apparaissent dans le fichier, avec le terme surligné
 
     Args:
-        word (str): le mot à trouver
+        words (list): les mot à trouver
         fileName (str): le nom du Fichier
-        textList (list) : la liste des noms de textes contenant le mot
+        textList (list) : la liste des noms de textes contenant les mots
     """
-    
+    print(textName)
     i=0
     doc=(soupSet[int(textNumber)-1])
     text=(doc.find('text').text)
     split=text.splitlines()
-    reg=regex(word)
+    regexes=list()
+    for word in words:
+        regexes.append(regex(word))
     for lineNumber in lineNumbers:
         line=split[lineNumber-1]
-        insensitive = re.compile(reg)
-        test=insensitive.findall(line)
-        for match in test:
-            line=line.replace(match,"\033[32m"+match+"\033[0m")
-        print(line)
+        for reg in regexes:
+            insensitive = re.compile(reg)
+            matches=insensitive.findall(line)
+            for match in matches:
+                line=line.replace(match,"\033[32m"+match+"\033[0m")
+        print("("+str(lineNumber)+") "+line)
 
 def regex(word:str)->str:
     """genere une regex à partir du mot. la regex contient le mot en minisuscule, en majuscule, et avec la premiere lettre en majuscule
@@ -223,3 +231,6 @@ def regex(word:str)->str:
     res+="|"+str.upper(word)
     res+="|"+str.capitalize(word)
     return res
+
+def findWords(words:list):
+    return
