@@ -71,8 +71,9 @@ def occurences(nomTexte:str,texte:str,dictionnaire:dict,stopList:list)->dict:
         i+=1
         for mot in ligne.split(" "):
             stem=sno.stem(mot)
+            mot=mot.translate(str.maketrans('', '', string.punctuation))
             if mot.isalnum() and not stopList.__contains__(mot) and not stopList.__contains__(stem):
-                mot=mot.translate(str.maketrans('', '', string.punctuation))
+                
                 
                 terme=dictionnaire.get(stem)
                 if terme==None:
