@@ -1,6 +1,7 @@
 ###Tangi LE HENAFF
 from __future__ import annotations
 import json
+import math
 import string
 import nltk
 import os, glob
@@ -70,8 +71,9 @@ def occurences(nomTexte:str,texte:str,dictionnaire:dict,stopList:list)->dict:
     for ligne in texte.splitlines():
         i+=1
         for mot in ligne.split(" "):
-            stem=sno.stem(mot)
+            
             mot=mot.translate(str.maketrans('', '', string.punctuation))
+            stem=sno.stem(mot)
             if mot.isalnum() and not stopList.__contains__(mot) and not stopList.__contains__(stem):
                 
                 
@@ -111,7 +113,7 @@ def parseFile(nomFichier:str,stopList,dictionnaire):
     set=soup.find_all('doc')
     i=0
     for doc in set:
-        print(doc.find('docno').text)
+        print("parsing"+doc.find('docno').text)
         i+=1
         if(doc.find('text'))!=None: 
             dictionnaire=occurences(doc.find('docno').text[1:-1],doc.find('text').text,dictionnaire,stopList)
@@ -127,9 +129,10 @@ def parseAll():
     for filename in glob.glob(PATH+'AP*'):
         with open(os.path.join(os.getcwd(), filename), 'r') as f: # open in readonly mode
             parseFile(filename,stopList,dictionnaire)
-
+    tf_idf_for_all(dictionnaire)
     dest=open("res/res.txt","r+")
     dest.truncate(0)
+    print("writing to file")
     json.dump(dictionnaire,dest,default=vars)
 
 def loadDict()->dict:
@@ -143,24 +146,34 @@ def loadDict()->dict:
     dest.close()
     return dictionnaire
 
-def findWord(word:str):
+def findWord(word:str,nb:int)->list:
     """trouve un mot dans le corpus
 
     Args:
         word (str): le mot à trouver
+        nb (int): le nombre de documents à remonter
+    Returns:
+        list: la liste des occurences du mot
     """
+    
+
     dictionnaire=loadDict()
     sno = nltk.stem.SnowballStemmer('english')
     stem=sno.stem(word)
     occurences=dictionnaire.get(stem,None)
     if(occurences==None or len(occurences)==0):
         print("mot "+word+" non trouvé")
-        return
+        return None
     else:
-        liste=list(occurences.items())
-        liste.sort()
-        memFichier=""
-        soupSet=None
+        if nb==0:
+            nb=len(occurences)
+        sorted_occ=dict(sorted(occurences.items(), key=lambda item: item[1]))
+        if(nb>len(sorted_occ)):
+            nb=len(sorted_occ)
+        liste=list(sorted_occ.items())[len(sorted_occ)-nb:]
+        liste.reverse()
+        return liste
+        """
         for document,cle in liste:
             split=document.split("-")
             fichier=split[0]
@@ -168,30 +181,27 @@ def findWord(word:str):
                 lecteur=open(PATH+fichier)
                 soupSet=BeautifulSoup(lecteur.read(),'html.parser').find_all("doc")
                 lecteur.close()
-            highlightInFile([word],soupSet,document,split[1],cle[1])
-            """
-            print("fichier "+str(fichier)+" document "+str(document)+" nombre d'occurences "+str(cle[0]))
-            print("lignes :")
-            for ligne in cle[1]:
-                print(ligne)
-                """
+            highlightInFile([stem],soupSet,document,split[1],cle[1])"""
 
-def highlightInText(word:str,textName:str,text:str):
-    """affiche dans la console les lignes ou le terme apparaît dans le texte, avec le terme surligné
+def highlightAllOccurences(liste:list,word:str):
+    """surligne toutes les occurences du mot dans le corpus
 
     Args:
-        word (str): le mot à trouver
-        textName (str): le nom du texte
-        text (str): le texte
+        liste (list): la liste des occurences du mot
+        word (str): le mot à surligner
     """
-    liste=text.splitlines()
-    i=1
-    for ligne in liste:
-        if(ligne.__contains__(word)):
-            ligne.replace(word,"\033[32m"+word+"\033[0m")
-            print(i+" "+ligne)
-
-        i+=1
+    sno = nltk.stem.SnowballStemmer('english')
+    stem=sno.stem(word)
+    memFichier=""
+    soupSet=None
+    for document,cle in liste:
+            split=document.split("-")
+            fichier=split[0]
+            if(fichier!=memFichier or soupSet==None):
+                lecteur=open(PATH+fichier)
+                soupSet=BeautifulSoup(lecteur.read(),'html.parser').find_all("doc")
+                lecteur.close()
+            highlightInFile([stem],soupSet,document,split[1],cle[1])
 
 def highlightInFile(words:list, soupSet:ResultSet,textName:str,textNumber:str,lineNumbers:list):
     """affiche dans la console les lignes ou les termes apparaissent dans le fichier, avec le terme surligné
@@ -201,7 +211,7 @@ def highlightInFile(words:list, soupSet:ResultSet,textName:str,textNumber:str,li
         fileName (str): le nom du Fichier
         textList (list) : la liste des noms de textes contenant les mots
     """
-    print(textName)
+    print("document "+textName)
     i=0
     doc=(soupSet[int(textNumber)-1])
     text=(doc.find('text').text)
@@ -233,5 +243,68 @@ def regex(word:str)->str:
     res+="|"+str.capitalize(word)
     return res
 
-def findWords(words:list):
+def findWords(words:list,nb:int):
+    """surligne toutes les occurences des mots de la liste, en appliquant un ET logique aux textes
+
+    Args:
+        words (list): la liste des mots à trouver
+        nb (int): le nombre de documents à remonter
+    """
+    liste=list()
+    for word in words:
+        res=findWord(word,0)
+        liste.append([word,res]) #ajout de toutes les occurences des mots à une liste
+    
+    liste2=list()
+    i=0
+    for occ in liste:
+        liste2.append([])
+        for doc in occ[1]:
+            liste2[i].append(doc[0])
+    i+=1
+    print(liste2)
+
     return
+
+def idf_calc(N:int,df:int)->int:
+    """calcule l'idf d'un terme
+
+    Args:
+        N (int): nombre de documents total
+        df (int): nombre de documents où le terme apparaît
+
+    Returns:
+        int: l'idf du terme
+    """
+    return math.log(N/df,10)
+
+def tf_calc(n:int)->int:
+    """calcule la frequence d'un terme
+
+    Args:
+        n (int): le nombre d'occurences du terme
+
+    Returns:
+        int: la frequence du terme
+    """
+    return 1+math.log(n)
+
+def tf_idf_for_all(index:dict)->dict:
+    """calcule le tf_idf de tous les termes de l'index et les ajoute au dictionnaire
+
+    Args:
+        index (dict): l'index
+
+    Returns:
+        dict: l'index modifié
+    """
+    nbDoc=len(index)
+    for terme in index:
+        print("calculating tf-idf for "+terme)
+        df=len(index[terme])
+        idf=idf_calc(nbDoc,df)
+        for document in index[terme]:
+            tf_idf=idf*tf_calc(index[terme][document][0])
+            index[terme][document].append(tf_idf)
+    return index
+
