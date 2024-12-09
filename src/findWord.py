@@ -11,4 +11,5 @@ if(int(sys.argv[1])<0):
     print("documentsToRetrieve must be positive or 0")
     exit(0)
 liste=findWord(sys.argv[2],int(sys.argv[1]))
-highlightAllOccurences(liste,sys.argv[2])
+if liste is not None :
+    highlightAllOccurences(liste,[sys.argv[2]])
