@@ -188,6 +188,18 @@ def loadReverseDict()->dict:
     dictionnaire=json.load(dest)
     dest.close()
     return dictionnaire
+
+def loadDFIDFDIct()->dict:
+    """charge le dictionnaire contenu dans df_idf.txt
+
+    Returns:
+        dict: le dictionnaire chargé
+    """
+    dest=open("res/df_idf.txt","r")
+    dictionnaire=json.load(dest)
+    dest.close()
+    return dictionnaire
+
 def findWord(word:str,nb:int)->list:
     """trouve un mot dans le corpus
 
@@ -298,23 +310,31 @@ def findWords(words:list,nb:int):
     words=list(dict.fromkeys(words))
 
     dictionnaire=loadReverseDict()
+    index=loadDict()
+    df_idf=loadDFIDFDIct()
     listDoc=list()
     
     sno = nltk.stem.SnowballStemmer('english')
     stem=list()
     for word in words:
         stem.append(sno.stem(word))
-
-    for doc in dictionnaire:
-        if all(k in dictionnaire[doc] for k in (stem)):
-            listDoc.append(doc)
+    i=0
+    while len(listDoc)==0 and len(stem)>=1:
+        for doc in dictionnaire:
+            if all(k in dictionnaire[doc] for k in (stem)):
+                listDoc.append(doc)
+        if len(listDoc)==0:
+            popped=stem.pop()
+            print("word "+popped+" was removed from the request for being last")
     listDoc.sort()
     newList=list()
     for doc in listDoc:
-        tupleLignes=(doc,list())
+        tupleLignes=(doc,list(),0)
         for word in stem:
-            tupleLignes=(tupleLignes[0],tupleLignes[1]+dictionnaire[doc][word])
+            tupleLignes=(tupleLignes[0],tupleLignes[1]+dictionnaire[doc][word],tupleLignes[2]+df_idf[word]["idf"]*index[word][doc][0])#pertinence=somme(idf*nb_occ)
         newList.append(tupleLignes)
+    newList=sorted(newList, key=lambda item: item[2])
+    newList.reverse()
     if nb>0 and nb < len(newList):
         newList=newList[:nb]
     memFile=""
@@ -362,13 +382,21 @@ def tf_idf_for_all(index:dict)->dict:
     Returns:
         dict: l'index modifié
     """
+    df_idf_dict=dict()
     nbDoc=len(index)
     for terme in index:
         print("calculating tf-idf for "+terme)
         df=len(index[terme])
         idf=idf_calc(nbDoc,df)
+        df_idf_dict[terme]=dict()
+        df_idf_dict[terme]["df"]=df
+        df_idf_dict[terme]["idf"]=idf
         for document in index[terme]:
             tf_idf=idf*tf_calc(index[terme][document][0])
             index[terme][document].append(tf_idf)
+    dest=open("res/df_idf.txt","r+")
+    dest.truncate(0)
+    print("writing to file")
+    json.dump(df_idf_dict,dest,default=vars)
     return index
 
