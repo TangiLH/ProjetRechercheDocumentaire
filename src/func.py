@@ -200,7 +200,7 @@ def loadDFIDFDIct()->dict:
     dest.close()
     return dictionnaire
 
-def findWord(word:str,nb:int)->list:
+def findWord(word:str,nb:int,dicos)->list:
     """trouve un mot dans le corpus
 
     Args:
@@ -211,7 +211,7 @@ def findWord(word:str,nb:int)->list:
     """
     
 
-    dictionnaire=loadDict()
+    dictionnaire=dicos["dict"]
     sno = nltk.stem.SnowballStemmer('english')
     stem=sno.stem(word)
     occurences=dictionnaire.get(stem,None)
@@ -221,7 +221,7 @@ def findWord(word:str,nb:int)->list:
     else:
         if nb==0:
             nb=len(occurences)
-        sorted_occ=dict(sorted(occurences.items(), key=lambda item: item[1]))
+        sorted_occ=dict(sorted(occurences.items(), key=lambda item: item[1][2]))
         if(nb>len(sorted_occ)):
             nb=len(sorted_occ)
         liste=list(sorted_occ.items())[len(sorted_occ)-nb:]
@@ -268,7 +268,8 @@ def highlightInFile(words:list, soupSet:ResultSet,textName:str,textNumber:str,li
         fileName (str): le nom du Fichier
         textList (list) : la liste des noms de textes contenant les mots
     """
-    print("document "+textName)
+    print("--------------\n")
+    print("document "+textName+" : \n")
     i=0
     doc=(soupSet[int(textNumber)-1])
     text=(doc.find('text').text)
@@ -284,6 +285,7 @@ def highlightInFile(words:list, soupSet:ResultSet,textName:str,textNumber:str,li
             for match in matches:
                 line=line.replace(match,"\033[32m"+match+"\033[0m")
         print("("+str(lineNumber)+") "+line)
+    print("--------------\n")
 
 def regex(word:str)->str:
     """genere une regex à partir du mot. la regex contient le mot en minisuscule, en majuscule, et avec la premiere lettre en majuscule
@@ -300,18 +302,23 @@ def regex(word:str)->str:
     res+="|"+str.capitalize(word)
     return res
 
-def findWords(words:list,nb:int):
+def findWords(words:list,nb:int,dicos:dict):
     """surligne toutes les occurences des mots de la liste, en appliquant un ET logique aux textes
 
     Args:
         words (list): la liste des mots à trouver
         nb (int): le nombre de documents à remonter
+        dicos (dict): dictionnaire contenant les dictionnaires des index
     """
     words=list(dict.fromkeys(words))
-
-    dictionnaire=loadReverseDict()
-    index=loadDict()
-    df_idf=loadDFIDFDIct()
+    stopList=dicos["stopList"]
+    for word in words:
+        if stopList.__contains__(word):
+            words.remove(word)
+            print("stop word removed : "+word)
+    dictionnaire=dicos["reverseDict"]
+    index=dicos["dict"]
+    df_idf=dicos["DFIDFdict"]
     listDoc=list()
     
     sno = nltk.stem.SnowballStemmer('english')
@@ -331,7 +338,8 @@ def findWords(words:list,nb:int):
     for doc in listDoc:
         tupleLignes=(doc,list(),0)
         for word in stem:
-            tupleLignes=(tupleLignes[0],tupleLignes[1]+dictionnaire[doc][word],tupleLignes[2]+df_idf[word]["idf"]*index[word][doc][0])#pertinence=somme(idf*nb_occ)
+            tf_idf=index.get(word).get(doc)[2]
+            tupleLignes=(tupleLignes[0],tupleLignes[1]+dictionnaire[doc][word],tupleLignes[2]+tf_idf)#pertinence=somme(tf_idf)
         newList.append(tupleLignes)
     newList=sorted(newList, key=lambda item: item[2])
     newList.reverse()
