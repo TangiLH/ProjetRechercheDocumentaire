@@ -1,7 +1,7 @@
 import sys
 from findWord import findWordCall
 from findWords import findWordsCall
-from func import loadDFIDFDIct, loadDict,loadReverseDict,parseAll
+from func import loadDFIDFDIct, loadDict,loadReverseDict,parseAll, DIR_PATH
 def afficherAide():
     print("------------------\nUsage : entrer votre requête pour rechercher un ou plusieurs mots")
     print("/aide pour l'aide")
@@ -15,7 +15,7 @@ def setMax(string,docsMax):
         print("requete incorrecte /aide pour de l'aide")
         return docsMax
     else:
-        return tab[1]if tab[1]>=0 else 1
+        return int(tab[1])if int(tab[1])>=0 else 1
         
 def main():
     print("Lancement du programme, chargement des dictionnaires...")
@@ -25,7 +25,7 @@ def main():
     dicos["dict"]=loadDict()
     dicos["reverseDict"]=loadReverseDict()
     dicos["DFIDFdict"]=loadDFIDFDIct()
-    stop=open("../stopwords.txt")
+    stop=open(DIR_PATH+"/../stopwords.txt")
     str=stop.read()
     stopList=str.splitlines()
     stop.close()

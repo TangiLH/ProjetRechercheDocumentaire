@@ -7,7 +7,9 @@ import nltk
 import os, glob
 import re #https://stackoverflow.com/questions/919056/case-insensitive-replace
 from bs4 import BeautifulSoup, ResultSet #parser SGML https://stackoverflow.com/questions/4633162/sgml-parser-in-python
-
+import os
+import os 
+DIR_PATH = os.path.dirname(os.path.realpath(__file__))+"/.."
 PATH="../AP/"
 
 class Terme:
@@ -148,25 +150,27 @@ def parseFile(nomFichier:str,stopList:list,dictionnaire:dict,reverseDict:dict):
 def parseAll():
     """créée le fichier XML rest.txt contenant les occurences de tous les mots du corpus
     """
-    stop=open("../stopwords.txt")
+    stop=open(DIR_PATH+"/../stopwords.txt")
     str=stop.read()
     stopList=str.splitlines()
     stop.close()
     dictionnaire=dict()
     reverseDict=dict()
-    for filename in glob.glob(PATH+'AP*'):
-        with open(os.path.join(os.getcwd(), filename), 'r') as f: # open in readonly mode
-            parseFile(filename,stopList,dictionnaire,reverseDict)
+    for filename in glob.glob(DIR_PATH+"/"+PATH+'AP*'):
+        parseFile(filename,stopList,dictionnaire,reverseDict)
     tf_idf_for_all(dictionnaire)
-    dest=open("res/res.txt","r+")
+    dest=open(DIR_PATH+"/res/res.txt","r+")
     dest.truncate(0)
     print("writing to file")
     json.dump(dictionnaire,dest,default=vars)
+    dest.close()
 
-    dest=open("res/index.txt","r+")
+    dest=open(DIR_PATH+"/res/index.txt","r+")
     dest.truncate(0)
     print("writing to file")
     json.dump(reverseDict,dest,default=vars)
+    dest.close()
+    print("idexing completed \n----------------------------")
 
 def loadDict()->dict:
     """charge le dictionnaire contenu dans le fichier XML res.txt
@@ -174,7 +178,7 @@ def loadDict()->dict:
     Returns:
         dict: le dictionnaire chargé
     """
-    dest=open("res/res.txt","r")
+    dest=open(DIR_PATH+"/res/res.txt","r")
     dictionnaire=json.load(dest)
     dest.close()
     return dictionnaire
@@ -184,7 +188,7 @@ def loadReverseDict()->dict:
     Returns:
         dict: le dictionnaire chargé
     """
-    dest=open("res/index.txt","r")
+    dest=open(DIR_PATH+"/res/index.txt","r")
     dictionnaire=json.load(dest)
     dest.close()
     return dictionnaire
@@ -195,7 +199,7 @@ def loadDFIDFDIct()->dict:
     Returns:
         dict: le dictionnaire chargé
     """
-    dest=open("res/df_idf.txt","r")
+    dest=open(DIR_PATH+"/res/df_idf.txt","r")
     dictionnaire=json.load(dest)
     dest.close()
     return dictionnaire
@@ -232,7 +236,7 @@ def findWord(word:str,nb:int,dicos)->list:
             split=document.split("-")
             fichier=split[0]
             if(fichier!=memFichier or soupSet==None):
-                lecteur=open(PATH+fichier)
+                lecteur=open(DIR_PATH+"/"+PATH+fichier)
                 soupSet=BeautifulSoup(lecteur.read(),'html.parser').find_all("doc")
                 lecteur.close()
             highlightInFile([stem],soupSet,document,split[1],cle[1])"""
@@ -254,7 +258,7 @@ def highlightAllOccurences(liste:list,words:list):
             split=document.split("-")
             fichier=split[0]
             if(fichier!=memFichier or soupSet==None):
-                lecteur=open(PATH+fichier)
+                lecteur=open(DIR_PATH+"/"+PATH+fichier)
                 soupSet=BeautifulSoup(lecteur.read(),'html.parser').find_all("doc")
                 lecteur.close()
             liste=list(dict.fromkeys(cle[1]))
@@ -350,7 +354,7 @@ def findWords(words:list,nb:int,dicos:dict):
     for document in newList:
         split=document[0].split("-")
         if(memFile!=split[0]):
-            lecteur=open(PATH+split[0])
+            lecteur=open(DIR_PATH+"/"+PATH+split[0])
             soupSet=BeautifulSoup(lecteur.read(),'html.parser').find_all("doc")
             lecteur.close()
         liste=list(dict.fromkeys(document[1]))
@@ -403,9 +407,10 @@ def tf_idf_for_all(index:dict)->dict:
         for document in index[terme]:
             tf_idf=idf*tf_calc(index[terme][document][0])
             index[terme][document].append(tf_idf)
-    dest=open("res/df_idf.txt","r+")
+    dest=open(DIR_PATH+"/res/df_idf.txt","r+")
     dest.truncate(0)
     print("writing to file")
     json.dump(df_idf_dict,dest,default=vars)
+    dest.close()
     return index
 
