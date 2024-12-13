@@ -225,7 +225,7 @@ def findWord(word:str,nb:int,dicos)->list:
         if(nb>len(sorted_occ)):
             nb=len(sorted_occ)
         liste=list(sorted_occ.items())[len(sorted_occ)-nb:]
-        liste.reverse()
+        #liste.reverse()
         return liste
         """
         for document,cle in liste:
@@ -346,6 +346,7 @@ def findWords(words:list,nb:int,dicos:dict):
     if nb>0 and nb < len(newList):
         newList=newList[:nb]
     memFile=""
+    newList.reverse()
     for document in newList:
         split=document[0].split("-")
         if(memFile!=split[0]):
